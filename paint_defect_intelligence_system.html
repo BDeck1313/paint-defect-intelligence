@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paint Defect Intelligence System</title>
+
+<style>
+body{
+font-family:Arial,Helvetica,sans-serif;
+margin:0;
+padding:0;
+background:#f4f6f8;
+}
+
+header{
+background:#0B3B60;
+color:white;
+padding:15px;
+text-align:center;
+}
+
+.container{
+padding:15px;
+max-width:1400px;
+margin:auto;
+}
+
+.card{
+background:white;
+padding:15px;
+margin-bottom:15px;
+border-radius:10px;
+box-shadow:0 2px 5px rgba(0,0,0,.15);
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+gap:10px;
+}
+
+input,select,textarea{
+width:100%;
+padding:8px;
+margin-top:4px;
+margin-bottom:10px;
+border:1px solid #ccc;
+border-radius:5px;
+box-sizing:border-box;
+}
+
+button{
+background:#0B3B60;
+color:white;
+border:none;
+padding:10px 15px;
+border-radius:5px;
+cursor:pointer;
+margin:3px;
+}
+
+button:hover{
+background:#115b95;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+font-size:14px;
+}
+
+table th{
+background:#0B3B60;
+color:white;
+padding:8px;
+}
+
+table td{
+border:1px solid #ddd;
+padding:6px;
+}
+
+.stat{
+font-size:28px;
+font-weight:bold;
+text-align:center;
+color:#0B3B60;
+}
+
+.label{
+text-align:center;
+font-size:14px;
+}
+
+.preview{
+max-width:120px;
+border-radius:5px;
+}
+
+.search{
+margin-bottom:15px;
+}
+
+@media(max-width:768px){
+table{
+font-size:11px;
+}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>Paint Defect Intelligence System</h1>
+<p>Defect Analysis • Root Cause Tracking • Continuous Improvement</p>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h2>Dashboard</h2>
+
+<div class="grid">
+
+<div>
+<div class="stat" id="totalDefects">0</div>
+<div class="label">Total Defects</div>
+</div>
+
+<div>
+<div class="stat" id="avgSeverity">0</div>
+<div class="label">Average Severity</div>
+</div>
+
+<div>
+<div class="stat" id="topDefect">-</div>
+<div class="label">Top Defect</div>
+</div>
+
+<div>
+<div class="stat" id="topBooth">-</div>
+<div class="label">Top Booth</div>
+</div>
+
+</div>
+</div>
+
+<div class="card">
+
+<h2>New Defect Entry</h2>
+
+<div class="grid">
+
+<div>
+<label>Date</label>
+<input type="date" id="date">
+</div>
+
+<div>
+<label>Booth</label>
+<select id="booth">
+<option>Booth 1</option>
+<option>Booth 2</option>
+<option>Booth 3</option>
+<option>Primer</option>
+<option>Basecoat</option>
+<option>Clearcoat</option>
+</select>
+</div>
+
+<div>
+<label>Shift</label>
+<select id="shift">
+<option>A</option>
+<option>B</option>
+<option>C</option>
+</select>
+</div>
+
+<div>
+<label>Color</label>
+<input type="text" id="color">
+</div>
+
+</div>
+
+<label>Defect Type</label>
+<select id="defectType">
+
+<option>Dirt Nib</option>
+<option>Fisheye</option>
+<option>Run</option>
+<option>Sag</option>
+<option>Solvent Pop</option>
+<option>Orange Peel</option>
+<option>Dry Spray</option>
+<option>Seed</option>
+<option>Crater</option>
+<option>Water Spot</option>
+<option>Fiber</option>
+<option>Delamination</option>
+<option>Burn Through</option>
+<option>Metallic Mottle</option>
+<option>Other</option>
+
+</select>
+
+<label>Severity (1-5)</label>
+<input type="number" min="1" max="5" value="3" id="severity">
+
+<label>Root Cause</label>
+<textarea id="rootCause"></textarea>
+
+<label>Corrective Action</label>
+<textarea id="correctiveAction"></textarea>
+
+<label>Photo</label>
+<input type="file" accept="image/*" id="photo">
+
+<button onclick="saveDefect()">Save Defect</button>
+
+</div>
+
+<div class="card">
+<h2>Search</h2>
+
+<input class="search"
+placeholder="Search defects..."
+id="searchBox"
+onkeyup="renderTable()">
+
+<button onclick="exportCSV()">Export CSV</button>
+<button onclick="clearData()">Delete All Records</button>
+
+</div>
+
+<div class="card">
+<h2>Defect Records</h2>
+
+<table>
+
+<thead>
+<tr>
+<th>Date</th>
+<th>Booth</th>
+<th>Shift</th>
+<th>Color</th>
+<th>Defect</th>
+<th>Severity</th>
+<th>Root Cause</th>
+<th>Action</th>
+<th>Photo</th>
+</tr>
+</thead>
+
+<tbody id="defectTable"></tbody>
+
+</table>
+</div>
+
+</div>
+
+<script>
+
+let defects =
+JSON.parse(localStorage.getItem("paintDefects")) || [];
+
+document.getElementById("date").value =
+new Date().toISOString().split('T')[0];
+
+function saveDefect(){
+
+const reader = new FileReader();
+
+const file =
+document.getElementById("photo").files[0];
+
+if(file){
+
+reader.onload = function(){
+
+addRecord(reader.result);
+
+};
+
+reader.readAsDataURL(file);
+
+}else{
+
+addRecord("");
+
+}
+
+}
+
+function addRecord(image){
+
+let record = {
+
+date:document.getElementById("date").value,
+booth:document.getElementById("booth").value,
+shift:document.getElementById("shift").value,
+color:document.getElementById("color").value,
+defectType:document.getElementById("defectType").value,
+severity:Number(document.getElementById("severity").value),
+rootCause:document.getElementById("rootCause").value,
+correctiveAction:document.getElementById("correctiveAction").value,
+photo:image
+
+};
+
+defects.push(record);
+
+localStorage.setItem(
+"paintDefects",
+JSON.stringify(defects)
+);
+
+updateDashboard();
+renderTable();
+
+document.getElementById("color").value="";
+document.getElementById("rootCause").value="";
+document.getElementById("correctiveAction").value="";
+document.getElementById("photo").value="";
+
+}
+
+function renderTable(){
+
+const search =
+document.getElementById("searchBox").value.toLowerCase();
+
+const tbody =
+document.getElementById("defectTable");
+
+tbody.innerHTML="";
+
+let filtered = defects.filter(d =>
+JSON.stringify(d).toLowerCase().includes(search)
+);
+
+filtered.forEach(d=>{
+
+let row =
+document.createElement("tr");
+
+row.innerHTML=`
+
+<td>${d.date}</td>
+<td>${d.booth}</td>
+<td>${d.shift}</td>
+<td>${d.color}</td>
+<td>${d.defectType}</td>
+<td>${d.severity}</td>
+<td>${d.rootCause}</td>
+<td>${d.correctiveAction}</td>
+<td>
+${d.photo ?
+'<img src="'+d.photo+'" class="preview">' :
+''
+}
+</td>
+
+`;
+
+tbody.appendChild(row);
+
+});
+
+}
+
+function updateDashboard(){
+
+document.getElementById("totalDefects").innerText =
+defects.length;
+
+let avg = 0;
+
+if(defects.length){
+
+avg = defects.reduce(
+(a,b)=>a+b.severity,0
+)/defects.length;
+
+}
+
+document.getElementById("avgSeverity").innerText =
+avg.toFixed(1);
+
+let defectCounts = {};
+
+defects.forEach(d=>{
+
+defectCounts[d.defectType] =
+(defectCounts[d.defectType] || 0)+1;
+
+});
+
+let topDefect="-";
+let topCount=0;
+
+for(let key in defectCounts){
+
+if(defectCounts[key] > topCount){
+
+topCount = defectCounts[key];
+topDefect = key;
+
+}
+
+}
+
+document.getElementById("topDefect")
+.innerText = topDefect;
+
+let boothCounts = {};
+
+defects.forEach(d=>{
+
+boothCounts[d.booth] =
+(boothCounts[d.booth] || 0)+1;
+
+});
+
+let topBooth="-";
+let topBoothCount=0;
+
+for(let key in boothCounts){
+
+if(boothCounts[key] > topBoothCount){
+
+topBoothCount=boothCounts[key];
+topBooth=key;
+
+}
+
+}
+
+document.getElementById("topBooth")
+.innerText=topBooth;
+
+}
+
+function exportCSV(){
+
+let csv =
+"Date,Booth,Shift,Color,Defect,Severity,Root Cause,Corrective Action\n";
+
+defects.forEach(d=>{
+
+csv += `"${d.date}","${d.booth}","${d.shift}",
+"${d.color}","${d.defectType}",
+"${d.severity}","${d.rootCause}",
+"${d.correctiveAction}"\n`;
+
+});
+
+let blob =
+new Blob([csv], {type:'text/csv'});
+
+let link =
+document.createElement("a");
+
+link.href =
+URL.createObjectURL(blob);
+
+link.download =
+"paint_defect_data.csv";
+
+link.click();
+
+}
+
+function clearData(){
+
+if(confirm("Delete all records?")){
+
+localStorage.removeItem("paintDefects");
+defects=[];
+renderTable();
+updateDashboard();
+
+}
+
+}
+
+updateDashboard();
+renderTable();
+
+</script>
+
+</body>
+</html>
